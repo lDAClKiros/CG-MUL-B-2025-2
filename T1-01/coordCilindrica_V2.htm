@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de Coordenadas Cilíndricas con Three.js</title>
+    <style>
+        /* Estilos generales para el cuerpo de la página */
+        body {
+            font-family: 'Inter', sans-serif; /* Fuente preferida */
+            background-color: #f0f4f8; /* Color de fondo suave */
+            display: flex;
+            justify-content: center; /* Centrar contenido horizontalmente */
+            align-items: flex-start; /* Alinear contenido al inicio verticalmente */
+            min-height: 100vh; /* Ocupar al menos el 100% de la altura de la ventana */
+            padding: 2rem; /* Espaciado interno general */
+            box-sizing: border-box; /* Incluir padding y border en el tamaño total */
+            margin: 0; /* Eliminar margen por defecto del body */
+            overflow-x: hidden; /* Evitar scroll horizontal */
+        }
+
+        /* Contenedor principal de la aplicación */
+        .container {
+            display: flex;
+            flex-direction: column; /* Elementos apilados verticalmente */
+            gap: 2rem; /* Espacio entre elementos hijos */
+            max-width: 900px; /* Ancho máximo del contenedor */
+            width: 100%; /* Ocupar todo el ancho disponible hasta el max-width */
+            background-color: #ffffff; /* Fondo blanco */
+            border-radius: 1rem; /* Esquinas redondeadas */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Sombra suave */
+            padding: 2rem; /* Espaciado interno */
+        }
+
+        /* Estilo para la tarjeta del formulario */
+        .form-card {
+            background-color: #f9fafb; /* Fondo ligeramente gris */
+            padding: 1.5rem; /* Espaciado interno */
+            border-radius: 0.75rem; /* Esquinas redondeadas */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* Sombra */
+            display: flex;
+            flex-direction: column; /* Elementos apilados verticalmente */
+            gap: 1rem; /* Espacio entre elementos hijos */
+        }
+
+        /* Grupo de formulario (label + input) */
+        .form-group {
+            display: flex;
+            flex-direction: column; /* Label e input apilados */
+            gap: 0.5rem; /* Espacio entre label e input */
+        }
+
+        /* Estilo para las etiquetas de los formularios */
+        label {
+            font-weight: 600; /* Negrita */
+            color: #374151; /* Color de texto oscuro */
+        }
+
+        /* Estilo para los campos de entrada de número */
+        input[type="number"] {
+            padding: 0.75rem; /* Espaciado interno */
+            border: 1px solid #d1d5db; /* Borde gris */
+            border-radius: 0.5rem; /* Esquinas redondeadas */
+            font-size: 1rem; /* Tamaño de fuente */
+            color: #1f2937; /* Color de texto */
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Transición suave */
+        }
+
+        /* Estilo para los campos de entrada cuando están en foco */
+        input[type="number"]:focus {
+            outline: none; /* Eliminar el contorno por defecto */
+            border-color: #3b82f6; /* Borde azul */
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); /* Sombra de foco azul */
+        }
+
+        /* Estilo para los botones */
+        button {
+            padding: 0.75rem 1.5rem; /* Espaciado interno */
+            background-color: #3b82f6; /* Fondo azul */
+            color: white; /* Texto blanco */
+            border: none; /* Sin borde */
+            border-radius: 0.5rem; /* Esquinas redondeadas */
+            cursor: pointer; /* Cursor de puntero */
+            font-size: 1rem; /* Tamaño de fuente */
+            font-weight: 600; /* Negrita */
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out; /* Transiciones suaves */
+        }
+
+        /* Estilo para los botones al pasar el ratón por encima */
+        button:hover {
+            background-color: #2563eb; /* Azul más oscuro */
+            transform: translateY(-1px); /* Ligero desplazamiento hacia arriba */
+        }
+
+        /* Estilo para los botones al hacer clic */
+        button:active {
+            transform: translateY(0); /* Volver a la posición original */
+        }
+
+        /* Contenedor del lienzo Three.js */
+        #threeJsContainer {
+            position: relative;
+            width: 100%; /* Ocupar todo el ancho disponible */
+            height: 500px; /* Altura fija para el lienzo Three.js */
+            background-color: #e2e8f0; /* Fondo gris claro */
+            border-radius: 0.75rem; /* Esquinas redondeadas */
+            overflow: hidden; /* Asegura que el contenido no se desborde */
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06); /* Sombra interna */
+        }
+
+        /* Estilo para el elemento canvas de Three.js */
+        #threeJsContainer canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Caja de información */
+        .info-box {
+            background-color: #e0f2fe; /* Fondo azul claro */
+            color: #0c4a6e; /* Texto azul oscuro */
+            padding: 1rem; /* Espaciado interno */
+            border-radius: 0.5rem; /* Esquinas redondeadas */
+            font-size: 0.9rem; /* Tamaño de fuente */
+            border: 1px solid #7dd3fc; /* Borde azul */
+            margin-bottom: 1.5rem; /* Margen inferior */
+        }
+
+        /* Estilo específico para el botón de limpiar */
+        .reset-button {
+            background-color: #ef4444; /* Rojo */
+        }
+
+        /* Estilo para el botón de limpiar al pasar el ratón por encima */
+        .reset-button:hover {
+            background-color: #dc2626; /* Rojo más oscuro */
+        }
+
+        /* Estilos para los títulos (h1, h2) */
+        h1 {
+            font-size: 1.875rem; /* text-3xl */
+            line-height: 2.25rem; /* leading-9 */
+            font-weight: 700; /* font-bold */
+            text-align: center; /* text-center */
+            color: #1f2937; /* text-gray-800 */
+            margin-bottom: 1rem; /* mb-4 */
+        }
+
+        h2 {
+            font-size: 1.25rem; /* text-xl */
+            line-height: 1.75rem; /* leading-7 */
+            font-weight: 600; /* font-semibold */
+            color: #374151; /* text-gray-700 */
+        }
+
+        /* Estilo para las etiquetas de texto en 3D (superpuestas en HTML) */
+        .label {
+            position: absolute;
+            color: #1f2937;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 2px 5px;
+            border-radius: 3px;
+            pointer-events: none; /* Permite hacer clic a través de la etiqueta */
+            transform: translate(-50%, -50%); /* Centra la etiqueta en su posición */
+            white-space: nowrap; /* Evita que el texto se rompa en varias líneas */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Visualizador de Coordenadas Cilíndricas con Three.js</h1>
+
+        <div class="info-box">
+            <p>Este programa visualiza una coordenada cilíndrica ($r, \theta, z$) en un entorno 3D interactivo utilizando Three.js. Puedes rotar la vista con el ratón.</p>
+            <p>Los ángulos deben ingresarse en grados y se convertirán automáticamente a radianes para los cálculos.</p>
+        </div>
+
+        <!-- Formulario para Coordenadas Cilíndricas -->
+        <div class="form-card">
+            <h2>Datos de Coordenadas Cilíndricas</h2>
+            <form id="cylindricalForm">
+                <div class="form-group">
+                    <label for="cylindricalR">Radio (r):</label>
+                    <input type="number" id="cylindricalR" name="r" value="50" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label for="cylindricalTheta">Ángulo (θ en grados):</label>
+                    <input type="number" id="cylindricalTheta" name="theta" value="45" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label for="cylindricalZ">Altura (z):</label>
+                    <input type="number" id="cylindricalZ" name="z" value="30" step="0.1" required>
+                </div>
+                <button type="submit">Generar Gráfico 3D</button>
+            </form>
+        </div>
+
+        <div id="threeJsContainer">
+            <!-- El canvas de Three.js se insertará aquí -->
+        </div>
+        <button id="clearSceneButton" class="reset-button">Limpiar Escena 3D</button>
+    </div>
+
+    <!-- Cargar la librería Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Cargar OrbitControls para la interacción de la cámara -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('threeJsContainer');
+
+            let scene, camera, renderer, controls;
+            let currentVisualizationElements = []; // Almacena los elementos de la visualización actual
+            let currentLabels = []; // Almacena las etiquetas HTML para poder eliminarlas
+
+            // Inicializar la escena de Three.js
+            function initThreeJs() {
+                // Escena: Contenedor para todos los objetos 3D
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0xe2e8f0); // Color de fondo claro
+
+                // Cámara: Define la perspectiva desde la que se ve la escena
+                camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+                camera.position.set(150, 150, 150); // Posición inicial de la cámara
+
+                // Renderizador: Dibuja la escena en el canvas
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                container.appendChild(renderer.domElement); // Añadir el canvas al contenedor HTML
+
+                // Controles de órbita: Permite al usuario rotar, hacer zoom y panear la escena con el ratón
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true; // Suaviza el movimiento
+                controls.dampingFactor = 0.25;
+                controls.screenSpacePanning = false; // Evita el paneo en el espacio de la pantalla
+                controls.maxPolarAngle = Math.PI / 2; // Limita la rotación para no ir debajo del plano XY
+
+                // Añadir una luz ambiental suave para que los objetos sean visibles
+                const ambientLight = new THREE.AmbientLight(0x404040); // Luz tenue en todas direcciones
+                scene.add(ambientLight);
+
+                // Añadir una luz direccional para dar más forma a los objetos
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+                directionalLight.position.set(1, 1, 1).normalize();
+                scene.add(directionalLight);
+
+                // Dibujar los ejes de coordenadas (X: rojo, Y: verde, Z: azul)
+                const axesHelper = new THREE.AxesHelper(100); // Longitud de los ejes
+                scene.add(axesHelper);
+                currentVisualizationElements.push(axesHelper); // Mantener referencia para no limpiar los ejes
+
+                // Dibujar una cuadrícula en el plano XY
+                const gridHelper = new THREE.GridHelper(200, 20, 0x000000, 0x000000);
+                gridHelper.material.opacity = 0.2;
+                gridHelper.material.transparent = true;
+                scene.add(gridHelper);
+                currentVisualizationElements.push(gridHelper); // Mantener referencia para no limpiar la cuadrícula
+
+                // Iniciar el bucle de animación
+                animate();
+            }
+
+            // Bucle de animación para renderizar la escena
+            function animate() {
+                requestAnimationFrame(animate); // Solicitar el siguiente frame
+                controls.update(); // Actualizar los controles de la cámara
+                renderer.render(scene, camera); // Renderizar la escena desde la perspectiva de la cámara
+            }
+
+            // Función para manejar el redimensionamiento de la ventana
+            function onWindowResize() {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            }
+            window.addEventListener('resize', onWindowResize);
+
+            /**
+             * Convierte un ángulo de grados a radianes.
+             * @param {number} degrees - Ángulo en grados.
+             * @returns {number} Ángulo en radianes.
+             */
+            const toRadians = (degrees) => degrees * (Math.PI / 180);
+
+            /**
+             * Limpia todos los elementos de visualización generados previamente (puntos, líneas, arcos, etiquetas).
+             */
+            function clearVisualization() {
+                currentVisualizationElements.forEach(obj => {
+                    if (obj !== scene.background && obj !== scene.children[0] && obj !== scene.children[1] && obj !== scene.children[2] && obj !== scene.children[3]) { // Evitar eliminar luces y ejes/cuadrícula
+                         scene.remove(obj);
+                         if (obj.geometry) obj.geometry.dispose();
+                         if (obj.material) {
+                            if (Array.isArray(obj.material)) {
+                                obj.material.forEach(m => m.dispose());
+                            } else {
+                                obj.material.dispose();
+                            }
+                         }
+                    }
+                });
+                currentVisualizationElements = []; // Reiniciar la lista de elementos
+                // Re-añadir ejes y cuadrícula si fueron eliminados por error (aunque el filtro debería evitarlo)
+                // Esto es una medida de seguridad, en teoría no deberían eliminarse si el filtro funciona
+                const axesHelper = scene.children.find(obj => obj instanceof THREE.AxesHelper);
+                if (!axesHelper) {
+                    const newAxes = new THREE.AxesHelper(100);
+                    scene.add(newAxes);
+                    currentVisualizationElements.push(newAxes);
+                }
+                const gridHelper = scene.children.find(obj => obj instanceof THREE.GridHelper);
+                if (!gridHelper) {
+                    const newGrid = new THREE.GridHelper(200, 20, 0x000000, 0x000000);
+                    newGrid.material.opacity = 0.2;
+                    newGrid.material.transparent = true;
+                    scene.add(newGrid);
+                    currentVisualizationElements.push(newGrid);
+                }
+
+
+                currentLabels.forEach(label => label.remove()); // Eliminar todas las etiquetas HTML
+                currentLabels = []; // Reiniciar la lista de etiquetas
+            }
+
+            /**
+             * Crea una etiqueta HTML para un punto 3D y la posiciona sobre el canvas.
+             * @param {THREE.Vector3} position3D - Posición 3D del objeto.
+             * @param {string} text - Texto de la etiqueta.
+             * @param {string} color - Color del texto.
+             * @returns {HTMLElement} El elemento div de la etiqueta.
+             */
+            function createLabel(position3D, text, color = '#1f2937') {
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'label';
+                labelDiv.style.color = color;
+                labelDiv.textContent = text;
+                container.appendChild(labelDiv);
+                currentLabels.push(labelDiv); // Almacenar para poder eliminarla
+
+                // Función para actualizar la posición de la etiqueta
+                const updateLabelPosition = () => {
+                    const vector = new THREE.Vector3();
+                    position3D.project(camera); // Proyectar la posición 3D a coordenadas de pantalla (NDC)
+                    const x = (vector.x * 0.5 + 0.5) * container.clientWidth;
+                    const y = (-vector.y * 0.5 + 0.5) * container.clientHeight;
+
+                    labelDiv.style.left = `${x}px`;
+                    labelDiv.style.top = `${y}px`;
+                };
+
+                // Actualizar la posición de la etiqueta en cada frame de renderizado
+                controls.addEventListener('change', updateLabelPosition);
+                // Llamar una vez para la posición inicial
+                updateLabelPosition();
+
+                return labelDiv;
+            }
+
+            /**
+             * Dibuja un punto en el espacio 3D usando coordenadas cilíndricas y su representación.
+             * @param {number} rCyl - Radio cilíndrico.
+             * @param {number} thetaDegCyl - Ángulo cilíndrico en grados.
+             * @param {number} zCyl - Altura cilíndrica.
+             */
+ 
+
+
+
+
+
+
+             function drawCylindricalVisualization(rCyl, thetaDegCyl, zCyl) {
+    clearVisualization(); // Limpiar elementos previos
+
+    const thetaRadCyl = toRadians(thetaDegCyl);
+
+    // Convertir coordenadas cilíndricas a cartesianas
+    const xCart = rCyl * Math.cos(thetaRadCyl);
+    const yCart = rCyl * Math.sin(thetaRadCyl);
+    const zCart = zCyl;
+
+    // Puntos 3D
+    const origin = new THREE.Vector3(0, 0, 0);
+    const pPrime = new THREE.Vector3(xCart, yCart, 0); // Proyección en el plano XY
+    const p = new THREE.Vector3(xCart, yCart, zCart); // Punto en el espacio
+
+    // 1. Dibujar el punto P
+    const pointGeometry = new THREE.SphereGeometry(3, 32, 32); // Radio 3
+    const pointMaterial = new THREE.MeshBasicMaterial({ color: 0x3b82f6 }); // Azul
+    const pointMesh = new THREE.Mesh(pointGeometry, pointMaterial);
+    pointMesh.position.copy(p);
+    scene.add(pointMesh);
+    currentVisualizationElements.push(pointMesh);
+    createLabel(p, `P(${xCart.toFixed(1)}, ${yCart.toFixed(1)}, ${zCart.toFixed(1)})`);
+
+    // 2. Dibujar el punto P'
+    const pPrimeGeometry = new THREE.SphereGeometry(2, 32, 32); // Radio 2, más pequeño
+    const pPrimeMaterial = new THREE.MeshBasicMaterial({ color: 0xf59e0b }); // Naranja
+    const pPrimeMesh = new THREE.Mesh(pPrimeGeometry, pPrimeMaterial);
+    pPrimeMesh.position.copy(pPrime);
+    scene.add(pPrimeMesh);
+    currentVisualizationElements.push(pPrimeMesh);
+    createLabel(pPrime, `P'(${xCart.toFixed(1)}, ${yCart.toFixed(1)}, 0)`);
+
+    // 3. Línea punteada de P' a P (representando Z)
+    const zLineMaterial = new THREE.LineDashedMaterial({ color: 0xef4444, dashSize: 3, gapSize: 2 }); // Rojo punteado
+    const zLineGeometry = new THREE.BufferGeometry().setFromPoints([pPrime, p]);
+    const zLine = new THREE.Line(zLineGeometry, zLineMaterial);
+    zLine.computeLineDistances(); // Necesario para líneas punteadas
+    scene.add(zLine);
+    currentVisualizationElements.push(zLine);
+    createLabel(new THREE.Vector3().lerpVectors(pPrime, p, 0.5), `z = ${zCyl.toFixed(1)}`, '#ef4444');
+
+    // 4. Línea del Origen a P' (representando r)
+    const rLineMaterial = new THREE.LineBasicMaterial({ color: 0x3b82f6 }); // Azul sólido
+    const rLineGeometry = new THREE.BufferGeometry().setFromPoints([origin, pPrime]);
+    const rLine = new THREE.Line(rLineGeometry, rLineMaterial);
+    scene.add(rLine);
+    currentVisualizationElements.push(rLine);
+    createLabel(new THREE.Vector3().lerpVectors(origin, pPrime, 0.5), `r = ${rCyl.toFixed(1)}`, '#3b82f6');
+
+    // 5. Arco para Theta
+    const curvePoints = [];
+    const radiusForArc = rCyl; // El radio del arco es 'r'
+    const startAngle = 0;
+    const endAngle = thetaRadCyl;
+    const segments = 50;
+
+    for (let i = 0; i <= segments; i++) {
+        const angle = startAngle + (endAngle - startAngle) * (i / segments);
+        const x = radiusForArc * Math.cos(angle);
+        const y = radiusForArc * Math.sin(angle);
+        curvePoints.push(new THREE.Vector3(x, y, 0)); // El arco está en el plano XY
+    }
+
+    const arcGeometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
+    const arcMaterial = new THREE.LineBasicMaterial({ color: 0x10b981 }); // Verde
+    const arcLine = new THREE.Line(arcGeometry, arcMaterial);
+    scene.add(arcLine);
+    currentVisualizationElements.push(arcLine);
+
+    // Etiqueta para Theta (posicionada cerca del arco)
+    const midAngle = thetaRadCyl / 2;
+    const labelArcPos = new THREE.Vector3(
+        radiusForArc * 0.6 * Math.cos(midAngle),
+        radiusForArc * 0.6 * Math.sin(midAngle),
+        0
+    );
+    createLabel(labelArcPos, `θ = ${thetaDegCyl.toFixed(1)}°`, '#10b981');
+
+    // 6. Crear esferas sobre la circunferencia
+    const sphereGeometry = new THREE.SphereGeometry(3, 16, 16); // Esfera con radio 3
+    const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x3b82f6 }); // Azul
+
+    // Crear esferas a lo largo de la circunferencia en el plano XY, pero con altura a lo largo del eje Y
+    const numOfSpheres = 50; // Puedes ajustar el número de esferas en el círculo
+    const numOfLayers = 10;  // Número de capas a lo largo del eje Y (altura del cilindro)
+    for (let i = 0; i < numOfSpheres; i++) {
+        const angle = (i / numOfSpheres) * Math.PI * 2; // Distribuir las esferas uniformemente en el círculo
+        const x = rCyl * Math.cos(angle);
+        const y = rCyl * Math.sin(angle);
+
+        // Crear esferas y posicionarlas a lo largo de la altura (eje Y)
+        for (let j = 0; j < numOfLayers; j++) {
+            const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+
+            const height = j * (40 / (numOfLayers - 1)); // Determinar la altura (puedes ajustar el 10 a la altura máxima que desees)
+            sphere.position.set(x, height, y); // Posicionar las esferas en el plano XY, pero con variación en Y
+
+            scene.add(sphere);
+            currentVisualizationElements.push(sphere);
+        }
+    }
+
+
+    // Ajustar la cámara para que el punto sea visible
+    controls.target.copy(p); // Enfocar la cámara en el punto P
+    controls.update();
+}
+
+
+
+
+
+
+             
+
+
+            // Inicializar Three.js al cargar la página
+            initThreeJs();
+
+            // Manejador de eventos para el formulario de Coordenadas Cilíndricas
+            document.getElementById('cylindricalForm').addEventListener('submit', (event) => {
+                event.preventDefault(); // Prevenir el envío por defecto del formulario
+                const r = parseFloat(document.getElementById('cylindricalR').value);
+                const thetaDeg = parseFloat(document.getElementById('cylindricalTheta').value);
+                const z = parseFloat(document.getElementById('cylindricalZ').value);
+
+                drawCylindricalVisualization(r, thetaDeg, z);
+            });
+
+            // Manejador de eventos para el botón de limpiar escena
+            document.getElementById('clearSceneButton').addEventListener('click', () => {
+                clearVisualization();
+            });
+        });
+    </script>
+</body>
+</html>
